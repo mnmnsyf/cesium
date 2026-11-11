@@ -2,9 +2,9 @@ import {
   Cartesian2,
   Cartesian3,
   Cartographic,
-  Cesium3DTilesVoxelProvider,
   Color,
   Ellipsoid,
+  FixedFrameTransforms,
   GeometryInstance,
   Math as CesiumMath,
   Matrix4,
@@ -14,7 +14,10 @@ import {
   Rectangle,
   RectangleGeometry,
   ShowGeometryInstanceAttribute,
-  Transforms,
+  WebGLConstants,
+} from "@cesium/core";
+import {
+  Cesium3DTilesVoxelProvider,
   Cesium3DTileStyle,
   EllipsoidSurfaceAppearance,
   Globe,
@@ -23,9 +26,7 @@ import {
   SceneMode,
   VoxelPrimitive,
   Sync,
-  WebGLConstants,
 } from "../../index.js";
-
 import Cesium3DTilesTester from "../../../../Specs/Cesium3DTilesTester.js";
 import createCanvas from "../../../../Specs/createCanvas.js";
 import createScene from "../../../../Specs/createScene.js";
@@ -158,7 +159,8 @@ describe(
         const cartographic = Rectangle.center(largeRectangle);
         const cartesian = Cartographic.toCartesian(cartographic);
         tileset.root.transform = Matrix4.IDENTITY;
-        tileset.modelMatrix = Transforms.eastNorthUpToFixedFrame(cartesian);
+        tileset.modelMatrix =
+          FixedFrameTransforms.eastNorthUpToFixedFrame(cartesian);
         return Cesium3DTilesTester.waitForTilesLoaded(scene, tileset);
       }
 
@@ -167,7 +169,7 @@ describe(
         scene.globe = globe;
         globe.depthTestAgainstTerrain = true;
         return pollToPromise(function () {
-          scene.render();
+          scene.renderForSpecs();
           return globe.tilesLoaded;
         });
       }
@@ -561,6 +563,19 @@ describe(
             expect(pickedObjects[1].primitive).toEqual(rectangle3);
             expect(pickedObjects[2].primitive).toEqual(rectangle2);
           }, 3);
+        });
+
+        it("stops drill picking when a picked object cannot be hidden", function () {
+          const rectangle = createLargeRectangle(0.0);
+          Object.defineProperty(rectangle, "show", {
+            get: () => true,
+            set: () => {},
+          });
+
+          expect(scene).toDrillPickAndCall(function (pickedObjects) {
+            expect(pickedObjects.length).toEqual(1);
+            expect(pickedObjects[0].primitive).toEqual(rectangle);
+          });
         });
       });
 
@@ -1443,7 +1458,7 @@ describe(
           });
         return pollToPromise(function () {
           // Scene requires manual updates in the tests to move along the promise
-          scene.render();
+          scene.renderForSpecs();
           return completed;
         }).then(function () {
           return result;
@@ -1466,7 +1481,7 @@ describe(
           });
         return pollToPromise(function () {
           // Scene requires manual updates in the tests to move along the promise
-          scene.render();
+          scene.renderForSpecs();
           return completed;
         }).then(function () {
           return result;
@@ -1488,7 +1503,7 @@ describe(
           });
         return pollToPromise(function () {
           // Scene requires manual updates in the tests to move along the promise
-          scene.render();
+          scene.renderForSpecs();
           return completed;
         }).then(function () {
           return result;
@@ -1506,7 +1521,7 @@ describe(
           });
         return pollToPromise(function () {
           // Scene requires manual updates in the tests to move along the promise
-          scene.render();
+          scene.renderForSpecs();
           return completed;
         }).then(function () {
           return result;
@@ -2652,7 +2667,7 @@ describe(
 
         return pollToPromise(function () {
           // Scene requires manual updates in the tests to move along the promise
-          scene.render();
+          scene.renderForSpecs();
           return completed === 2;
         }).then(function () {
           expect(results[0][0]).toBeDefined();
